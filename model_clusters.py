@@ -35,6 +35,7 @@ class hmt_grn(nn.Module):
         self.geoHashEmbed6 = nn.Embedding(len(arg['index2geoHash_6']), arg['embedding_dim'],
                                           padding_idx=self.padding_idx)
         self.userEmbed = nn.Embedding(arg['numUsers'], arg['userEmbed_dim'], padding_idx=self.padding_idx)
+        self.clustersEmbed = nn.Embedding(arg['vocab_size'], arg['userEmbed_dim'], padding_idx=self.padding_idx)
 
         self.nextGeoHash2Dense = nn.Linear(arg['hidden_dim'] + arg['embedding_dim'], len(arg['geohash2Index_2']),
                                            bias=True)
@@ -53,6 +54,9 @@ class hmt_grn(nn.Module):
 
         self.fuseDense = nn.Linear(arg['userEmbed_dim'] + arg['hidden_dim'],
                                    arg['num_classes'] * 1, bias=True)
+        
+        self.fuseDenseClusters = nn.Linear(arg['userEmbed_dim']*2 + arg['hidden_dim'],
+                                   arg['num_classes'] * 1, bias=True)
 
         self.ownLSTM = ownLSTM(arg['embedding_dim'] * 1, arg['hidden_dim'])
 
@@ -65,21 +69,46 @@ class hmt_grn(nn.Module):
         '''
 
         if mode == 'train':
-            x, users, y, x_geoHash2, x_geoHash3, x_geoHash4, x_geoHash5, x_geoHash6 = input
+            x, users, y, x_geoHash2, x_geoHash3, x_geoHash4, x_geoHash5, x_geoHash6, clusters = input
             # print(x.dtype, users.dtype, y.dtype, x_geoHash2.dtype, x_geoHash3.dtype, x_geoHash4.dtype, x_geoHash5.dtype, x_geoHash6.dtype)
             # x, users, y = LT(x).cuda(), LT(users).cuda(), LT(y).cuda()
+            clusters_lab = clusters['labels']
+            # print(f"clusters_lab: {clusters_lab}")
+            cluster_labels = []
+            for batch_user in users:
+                tmp = []
+                for user in batch_user:
+                    if user >= clusters_lab.shape[0]:
+                        tmp.append(clusters_lab[0])
+                    else:
+                        tmp.append(clusters_lab[user])
+                cluster_labels.append(tmp)
+            
             x, users, y = x.to(t.int64).cuda(), users.to(t.int64).cuda(), y.to(t.int64).cuda()
-
+            cluster_labels = LT(cluster_labels).cuda()
             numTimeSteps = len(x[0])
 
         else:
 
-            x, users, x_geoHash2, x_geoHash3, x_geoHash4, x_geoHash5, x_geoHash6 = input
+            x, users, x_geoHash2, x_geoHash3, x_geoHash4, x_geoHash5, x_geoHash6, clusters = input
+
+            clusters_lab = clusters['labels']
+            cluster_labels = []
+            # print(len(users))
+            for user in users:
+                if user >= clusters_lab.shape[0]:
+                    cluster_labels.append(clusters_lab[0])
+                else:
+                    cluster_labels.append(clusters_lab[user])
+
+            
             x, users, x_geoHash2, x_geoHash3, x_geoHash4, x_geoHash5, x_geoHash6 = LT(x).cuda(), LT(users).cuda(), LT(
             x_geoHash2).cuda(), LT(x_geoHash3).cuda(), \
             LT(x_geoHash4).cuda(), LT(x_geoHash5).cuda(), LT(x_geoHash6).cuda()
-
+            cluster_labels = LT(cluster_labels).cuda()
+            
             users = users.unsqueeze(0)
+            cluster_labels = cluster_labels.unsqueeze(0)
             numTimeSteps = len(x)
 
         batchSize = len(x)
@@ -152,8 +181,9 @@ class hmt_grn(nn.Module):
         rnn_out = self.dropout(rnn_out) #(batch_size, time_steps, hidden_size)
 
         userEmbedSeq = self.dropout(self.userEmbed(users))#(batch_size, time_steps, embed_dim)
+        clustersEmbedSeq = self.dropout(self.clustersEmbed(cluster_labels))#(batch_size, time_steps, embed_dim)
 
-        finalEmbed = t.cat((rnn_out, userEmbedSeq), dim=2) #(batch_size, time_steps, hidden_size+embed_dim)
+        finalEmbed = t.cat((rnn_out, userEmbedSeq, clustersEmbedSeq), dim=2) #(batch_size, time_steps, hidden_size+embed_dim)
 
 
         #from (batch_size, time_steps, hidden_size+embed_dim) -> (batch_size, time_steps, len(arg['geohash2Index_i']))
@@ -176,7 +206,7 @@ class hmt_grn(nn.Module):
         nextgeohashPred_5 = F.log_softmax(nextGeoHashlogits_5, dim=2)
         nextgeohashPred_6 = F.log_softmax(nextGeoHashlogits_6, dim=2)
 
-        logits = self.fuseDense(finalEmbed)
+        logits = self.fuseDenseClusters(finalEmbed)
 
         #(batch_size, time_steps, num_classes)
         logits = logits.view(batchSize, numTimeSteps, self.num_classes)

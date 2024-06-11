@@ -8,7 +8,7 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 import time
 import networkx as nx
-from model import *
+from model_clusters import *
 import random
 import numpy as np
 
@@ -32,6 +32,10 @@ np.random.seed(seed)
 # Imposta alcuni parametri aggiuntivi per garantire la riproducibilità
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
+
+
+with open('clusters.pkl', 'rb') as f:
+    clusters = pickle.load(f)
 
 
 
@@ -168,7 +172,7 @@ if __name__ == '__main__':
 
                 # print(f"x:{x}, user:{user}, y:{y}, x_geoHash2: {x_geoHash2}")
                 # break
-                input = (x, user, y, x_geoHash2, x_geoHash3, x_geoHash4, x_geoHash5, x_geoHash6)
+                input = (x, user, y, x_geoHash2, x_geoHash3, x_geoHash4, x_geoHash5, x_geoHash6, clusters)
 
                 logSoftmaxScores,nextgeohashPred_2,nextgeohashPred_3,nextgeohashPred_4,nextgeohashPred_5,nextgeohashPred_6= classification(input, 'train', arg)
                 # print(f"logSoftmaxScores.shape: {logSoftmaxScores.shape}")

@@ -3,6 +3,7 @@ import os
 import sys
 from utils.func import *
 from tqdm import tqdm
+import torch
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 import time
@@ -11,13 +12,16 @@ from model import *
 import random
 
 if __name__ == '__main__': 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    print(f"device: {device}")
 
     for dataSource in ['gowalla']:
         arg = {}
 
         start_time = time.time()
 
-        arg['epoch'] = 20
+        arg['epoch'] = 2
         arg['beamSize'] = 100
         arg['embedding_dim'] = 1024
         arg['userEmbed_dim'] = 1024
@@ -70,7 +74,12 @@ if __name__ == '__main__':
         with open(beamSearchHashDictFileName + '.pickle', 'rb') as handle:
             arg['beamSearchHashDict'] = pickle.load(handle)
         # ==================================geohash related data================================================
-        # print(arg['numUser'])
+        # print(f"arg['numUser']: {arg['numUser']}")
+        # print(f"arg['poi2geohash'+'_'+str(6)]: {arg['poi2geohash'+'_'+str(6)]}")
+        # print(f"arg['geohash2poi'+'_'+str(6)]: {arg['geohash2poi'+'_'+str(6)]}")
+        # print(f"arg['geohash2Index'+'_'+str(6)]: {arg['geohash2Index'+'_'+str(6)]}")
+        # print(f"arg['index2geoHash'+'_'+str(6)]: {arg['index2geoHash'+'_'+str(6)]}")
+
         classification_dataset = classificationDataset(arg['numUser'], dataSource, arg)
 
         # print(f"classification_dataset[0]: {classification_dataset[0]}")
@@ -81,10 +90,17 @@ if __name__ == '__main__':
         # print('Data loaded')
         # print('init model')
 
-        # print(arg['temporalGraph'])
-        # print(arg['spatialGraph'])
+        # print(arg['temporalGraph'][2])
+        
+        # for i in arg['temporalGraph'][2]:
+        #     print(i)
+
+        print(arg['spatialGraph'])
+
         # print(arg['poi2geohash'+'_'+str(eachGeoHashPrecision)])
         # print(arg['geohash2poi'+'_'+str(eachGeoHashPrecision)])
         # print(arg['geohash2Index'+'_'+str(eachGeoHashPrecision)])
+        # print(f"{arg['index2geoHash'+'_'+str(eachGeoHashPrecision)]}")
+
         # print(arg['beamSearchHashDict'])
         # print(arg['numUser'])

@@ -4,6 +4,10 @@ import pickle
 from tqdm import tqdm
 import _pickle as cPickle
 
+
+with open('clusters.pkl', 'rb') as f:
+    clusters = pickle.load(f)
+
 def evaluate(model, dataSource, arg):
 
     if dataSource == 'gowalla':
@@ -42,7 +46,7 @@ def evaluate(model, dataSource, arg):
     totalTestInstances = 0
 
 
-    for index in tqdm(range(len(test_pois_seq[:1000]))):
+    for index in tqdm(range(len(test_pois_seq))):
 
         userAP = []
         test_set_poi_seq = [i for i in test_pois_seq[index]]
@@ -77,7 +81,7 @@ def evaluate(model, dataSource, arg):
             mappedGeoHash6 = arg['geohash2Index_6'][arg['poi2geohash_6'][poiSeq[0]]]
 
             input = [poiSeq, userSeq, [[mappedGeoHash2]], [[mappedGeoHash3]], [[mappedGeoHash4]],
-                     [[mappedGeoHash5]], [[mappedGeoHash6]]]
+                     [[mappedGeoHash5]], [[mappedGeoHash6]], clusters]
 
             userID = index + 1
             assert userID == userSeq[0]  #  double check
