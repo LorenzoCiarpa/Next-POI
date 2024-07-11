@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
         classification_dataset = classificationDataset(arg['numUser'], dataSource, arg)
 
-        # print(f"classification_dataset[0]: {classification_dataset[0]}")
+        print(f"classification_dataset[0]: {classification_dataset[0]}")
         # print(f"classification_dataset[1]: {classification_dataset[1]}")
         classification_dataloader = DataLoader(classification_dataset, batch_size=arg['classification_batch'],
                                                shuffle=True, pin_memory=True,
@@ -95,7 +95,10 @@ if __name__ == '__main__':
         # for i in arg['temporalGraph'][2]:
         #     print(i)
 
-        print(arg['spatialGraph'])
+        print(arg['spatialGraph'][2])
+        print()
+        print(arg['temporalGraph'][2])
+        # print([i for i in arg['temporalGraph'][2]])
 
         # print(arg['poi2geohash'+'_'+str(eachGeoHashPrecision)])
         # print(arg['geohash2poi'+'_'+str(eachGeoHashPrecision)])

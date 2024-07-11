@@ -221,15 +221,48 @@ def evaluate(model, dataSource, arg):
 
 
 
-def get_top_k_users(users_clustered, cluster_id, top_k = 5):
+def get_top_k_users(users_clustered, cluster_id, id_user, top_k = 5):
+
+    top_5_vectors = getMostSimilar(users_clustered, cluster_id, id_user, top_k)
+    
     users_clustered_t = users_clustered[cluster_id][:top_k]
     # print(f"users_clustered_t 1: {users_clustered_t}")
     users_clustered_t = t.tensor(np.array(users_clustered_t))
+
+    # print(f"top_5_vectors: {top_5_vectors}")
+    # print(f"users_clustered_t: {users_clustered_t}")
+
     # print(f"users_clustered_t 2: {users_clustered_t}")
     users_clustered_t = users_clustered_t.mean(axis=0)
     # print(f"users_clustered_t 3: {users_clustered_t.shape}")
 
     return users_clustered_t
+
+def getMostSimilar(users_clustered, cluster_id, id_user, top_k):
+    users_clustered_t = users_clustered[cluster_id]
+    users_clustered_t = t.tensor(np.array(users_clustered_t))
+    user = users_clustered_t[0]
+
+    # print(f"getMost users_clustered_t: {users_clustered_t}")
+    # print(f"getMost user: {user}")
+
+    # Normalizza i vettori per il calcolo della similarità del coseno
+    v_norm = user / t.norm(user, dim=0, keepdim=True)
+    m_norm = users_clustered_t / t.norm(users_clustered_t, dim=1, keepdim=True)
+
+    if users_clustered_t.shape[0] < 5:
+        return users_clustered_t
+    
+    # Calcola la similarità del coseno
+    similarity = t.matmul(m_norm, v_norm.t()).squeeze()
+
+    # Ottieni gli indici dei 5 vettori più simili
+    _, indices = t.topk(similarity, 5, largest=True)
+
+    # Filtra la matrice m sui 5 indici più simili
+    top_5_vectors = users_clustered_t[indices]
+
+    return top_5_vectors
 
 
 if __name__ == '__main__':

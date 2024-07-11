@@ -93,7 +93,7 @@ class hmt_grn(nn.Module):
                         # tmp.append(clusters_lab[user])
                     
                     tmp.append(clusters_lab[id_user])
-                    tmp2.append(get_top_k_users(users_clustered, clusters_lab[id_user]))
+                    tmp2.append(get_top_k_users(users_clustered, clusters_lab[id_user], id_user))
 
                 cluster_labels.append(tmp)
                 user_cluster_embeds.append(tmp2)
@@ -109,7 +109,8 @@ class hmt_grn(nn.Module):
             
             x, users, y = x.to(t.int64).cuda(), users.to(t.int64).cuda(), y.to(t.int64).cuda()
             cluster_labels = LT(cluster_labels).cuda()
-            user_cluster_embeds = t.tensor(user_cluster_embeds, device=arg["device"])
+            # user_cluster_embeds = t.tensor(user_cluster_embeds.clone().detach(), device=arg["device"])
+            user_cluster_embeds = user_cluster_embeds.to(device=arg["device"])
             # user_cluster_embeds = LT(user_cluster_embeds).cuda()
             numTimeSteps = len(x[0])
 
@@ -133,7 +134,7 @@ class hmt_grn(nn.Module):
                     # cluster_labels.append(clusters_lab[user])
                 
                 cluster_labels.append(clusters_lab[id_user])
-                user_cluster_embeds.append(get_top_k_users(users_clustered, clusters_lab[id_user]))
+                user_cluster_embeds.append(get_top_k_users(users_clustered, clusters_lab[id_user], id_user))
 
 
             user_cluster_embeds = t.stack(user_cluster_embeds).to(device = arg["device"])
