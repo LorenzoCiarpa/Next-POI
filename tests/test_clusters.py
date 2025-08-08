@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-from utils.func import *
+from utils.func_clusters import *
 from tqdm import tqdm
 import torch
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 import time
 import networkx as nx
-from model import *
+from ..models.model_clusters import *
 import random
 import numpy as np
 
@@ -32,6 +32,10 @@ np.random.seed(seed)
 # Imposta alcuni parametri aggiuntivi per garantire la riproducibilità
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
+
+
+with open('clusters.pkl', 'rb') as f:
+    clusters = pickle.load(f)
 
 
 
@@ -110,14 +114,14 @@ if __name__ == '__main__':
 
         classification = hmt_grn(arg).float().cuda()
 
+        classification_optim = Adam(classification.parameters(), lr=arg['classification_learning_rate'])
+
         print('init model done')
 
-        checkpoint = torch.load('checkpoint/GRN_20.pth')
+        checkpoint = torch.load('checkpoint/GRN_cluster_20.pth')
 
         # Carica i pesi nel modello
         classification.load_state_dict(checkpoint)
-        
-        print()
         model = classification
 
         arg['novelEval'] = True

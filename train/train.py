@@ -8,7 +8,7 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 import time
 import networkx as nx
-from model import *
+from ..models.model import *
 import random
 import numpy as np
 

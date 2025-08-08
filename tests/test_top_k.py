@@ -1,19 +1,47 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-from utils.func import *
+from utils.func_clusters import *
 from tqdm import tqdm
 import torch
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 import time
 import networkx as nx
-from model import *
+from ..models.model_top_k import *
 import random
+import numpy as np
+
+#reproducibility
+
+# Imposta la seed per il generatore casuale di PyTorch
+seed = 42
+torch.manual_seed(seed)
+
+# Imposta la seed per la generazione casuale CUDA (se usi GPU)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # Imposta la seed per tutti i dispositivi (se si utilizzano più GPU)
+
+# Imposta la seed per il generatore casuale di Python
+random.seed(seed)
+
+# Imposta la seed per il generatore casuale di NumPy
+np.random.seed(seed)
+
+# Imposta alcuni parametri aggiuntivi per garantire la riproducibilità
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+
+with open('clusters.pkl', 'rb') as f:
+    clusters = pickle.load(f)
+
+
 
 if __name__ == '__main__': 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"device: {device}")
 
     for dataSource in ['gowalla']:
@@ -21,7 +49,7 @@ if __name__ == '__main__':
 
         start_time = time.time()
 
-        arg['epoch'] = 2
+        arg['epoch'] = 20
         arg['beamSize'] = 100
         arg['embedding_dim'] = 1024
         arg['userEmbed_dim'] = 1024
@@ -30,6 +58,8 @@ if __name__ == '__main__':
         arg['classification_batch'] = 32
         arg['dropout'] = 0.9
         arg['dataFolder'] = 'processedFiles'
+        arg['device'] = device
+
 
         print()
         print(dataSource)
@@ -44,6 +74,7 @@ if __name__ == '__main__':
             'data/' + arg['dataFolder'] + '/' + dataSource + '_spatial.edgelist', nodetype=int,
             create_using=nx.Graph())
         # ==================================Spatial Temporal graphs================================================
+
         userFileName = 'data/' + arg['dataFolder'] + '/' + dataSource + '_userCount.pickle'
 
         with open(userFileName,
@@ -74,36 +105,28 @@ if __name__ == '__main__':
         with open(beamSearchHashDictFileName + '.pickle', 'rb') as handle:
             arg['beamSearchHashDict'] = pickle.load(handle)
         # ==================================geohash related data================================================
-        # print(f"arg['numUser']: {arg['numUser']}")
-        # print(f"arg['poi2geohash'+'_'+str(6)]: {arg['poi2geohash'+'_'+str(6)]}")
-        # print(f"arg['geohash2poi'+'_'+str(6)]: {arg['geohash2poi'+'_'+str(6)]}")
-        # print(f"arg['geohash2Index'+'_'+str(6)]: {arg['geohash2Index'+'_'+str(6)]}")
-        # print(f"arg['index2geoHash'+'_'+str(6)]: {arg['index2geoHash'+'_'+str(6)]}")
 
         classification_dataset = classificationDataset(arg['numUser'], dataSource, arg)
 
-        print(f"classification_dataset[0]: {classification_dataset[0]}")
-        # print(f"classification_dataset[1]: {classification_dataset[1]}")
         classification_dataloader = DataLoader(classification_dataset, batch_size=arg['classification_batch'],
                                                shuffle=True, pin_memory=True,
                                                num_workers=0)
-        # print('Data loaded')
-        # print('init model')
+        print('Data loaded')
+        print('init model')
 
-        # print(arg['temporalGraph'][2])
-        
-        # for i in arg['temporalGraph'][2]:
-        #     print(i)
+        classification = hmt_grn(arg).float().cuda()
 
-        print(arg['spatialGraph'][2])
-        print()
-        print(arg['temporalGraph'][2])
-        # print([i for i in arg['temporalGraph'][2]])
+        classification_optim = Adam(classification.parameters(), lr=arg['classification_learning_rate'])
 
-        # print(arg['poi2geohash'+'_'+str(eachGeoHashPrecision)])
-        # print(arg['geohash2poi'+'_'+str(eachGeoHashPrecision)])
-        # print(arg['geohash2Index'+'_'+str(eachGeoHashPrecision)])
-        # print(f"{arg['index2geoHash'+'_'+str(eachGeoHashPrecision)]}")
+        print('init model done')
 
-        # print(arg['beamSearchHashDict'])
-        # print(arg['numUser'])
+        # checkpoint = torch.load('checkpoint/GRN_cluster_20.pth')
+
+        # # Carica i pesi nel modello
+        # classification.load_state_dict(checkpoint)
+        model = classification
+
+        arg['novelEval'] = True
+        evaluate(model, dataSource, arg)
+
+        sys.stdout.flush()

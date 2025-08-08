@@ -8,7 +8,7 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 import time
 import networkx as nx
-from model_top_k import *
+from ..models.model_clusters import *
 import random
 import numpy as np
 
@@ -58,7 +58,6 @@ if __name__ == '__main__':
         arg['classification_batch'] = 32
         arg['dropout'] = 0.9
         arg['dataFolder'] = 'processedFiles'
-        arg['device'] = device
 
         print()
         print(dataSource)
